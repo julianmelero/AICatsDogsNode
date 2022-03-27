@@ -24,6 +24,23 @@ const fileToTensor = async (fileBuffer: Buffer ) => ({
   // return imageToTensor(data, info);
 });
 
+const imageToTensor = (
+  pixelData: Buffer,
+  imageInfo: sharp.OutputInfo
+): tf.Tensor3D => {
+  const tImage = tf.node.decodeImage(pixelData) as tf.Tensor3D;
+
+  return tImage
+    ?.resizeBilinear([
+      parseInt(process.env.IMG_SIZE!),
+      parseInt(process.env.IMG_SIZE!),
+    ])
+    .div(tf.scalar(255))
+    .mean(2)
+    .expandDims(2)
+    .expandDims(0);
+};
+
 
 // Función para cargar el modelo
 const loadModel = async () => {
