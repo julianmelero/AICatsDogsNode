@@ -16,7 +16,7 @@ app.use(express.json());
 const modelPath = path.resolve('model.json');
 
 
-const fileToTensor = async (fileBuffer: Buffer ) => ({
+const fileToTensor = async (fileBuffer) => ({
   const { data, info } = await sharp(fileBuffer)
     .removeAlpha()
     .grayscale()
@@ -25,8 +25,8 @@ const fileToTensor = async (fileBuffer: Buffer ) => ({
 });
 
 const imageToTensor = (
-  pixelData: Buffer,
-  imageInfo: sharp.OutputInfo
+  pixelData,
+  imageInfo
 ): tf.Tensor3D => {
   const tImage = tf.node.decodeImage(pixelData) as tf.Tensor3D;
 
