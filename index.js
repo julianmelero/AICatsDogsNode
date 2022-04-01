@@ -1,65 +1,57 @@
 
-// Cargamos los módulos necesarios, como son Tensorflow para Node y jimp para manipular imágenes
-const tf = require('@tensorflow/tfjs-node');
-const Jimp = require('jimp');
-
-// Directorio para el modelo
-const MODEL_DIR_PATH = `${"./"}`;
-
-
-// Función asíncrona para la carga del modelo, de la imagen, transformación y predicción
-
-(async () => {
-
-if (process.argv.length !== 3) throw new Error('Faltan argumentos: node main.js <IMAGE_FILE>');
-
-// Directorio y archivo de la imagen
-const IMAGE_FILE_PATH = process.argv[2];
-  
-  
-const model = await tf.loadLayersModel(`file://${MODEL_DIR_PATH}/model.json`);
-  
-
-  const image = await Jimp.read(IMAGE_FILE_PATH);
-
-  // Redimensionamos la imagen a 1200 * 600 y la alineamos al centro
-  image.cover(1200, 600, Jimp.HORIZONTAL_ALIGN_CENTER | Jimp.VERTICAL_ALIGN_MIDDLE);
-
-  const NUM_OF_CHANNELS = 1;
-  // EL modelo requiere un array de 100*100*1
-  let values = new Float32Array(100 * 100 * NUM_OF_CHANNELS);
+// Módulos necesarios
+const tf = require('@tensorflow/tfjs');
+const tfnode = require('@tensorflow/tfjs-node');
+const path = require('path');
+const fs = require('fs');
 
 
-  // Normalizamos
-  let i = 0;
-  image.scan(0, 0, image.bitmap.width, image.bitmap.height, (x, y, idx) => {
-    const pixel = Jimp.intToRGBA(image.getPixelColor(x, y));
-    pixel.r = pixel.r / 127.0 - 1;
-    pixel.g = pixel.g / 127.0 - 1;
-    pixel.b = pixel.b / 127.0 - 1;
-    pixel.a = pixel.a / 127.0 - 1;
-    values[i * NUM_OF_CHANNELS + 0] = pixel.r;
-    values[i * NUM_OF_CHANNELS + 1] = pixel.g;
-    values[i * NUM_OF_CHANNELS + 2] = pixel.b;
-    i++;
-  });
+// Ponemos las dimensiones del modelo
+const IMG_SIZE = 100;
 
-  const outShape = [100, 100, NUM_OF_CHANNELS];
-  let img_tensor = tf.tensor3d(values, outShape, 'float32');
-  img_tensor = img_tensor.expandDims(0);
+// Iniciamos la variable del modelo
+let model = null;
 
 
+// Función asíncrona para inicar la app
+async function start() {
+  const modelPath = path.resolve('./model.json');
+  model = await tf.loadLayersModel(`file://${modelPath}`);
 
-  const prediction = await model.predict(img_tensor).dataSync();
+  await imageClassification(process.argv[2]);
+}
 
-  if (prediction >= 0.5){
-      console.log("Es un perro");
+
+// Constante con la función anónimo de leer la imagen
+const readImage = path => {
+  const imageBuffer = fs.readFileSync(path);
+
+  const tfimage = tfnode.node
+    .decodeImage(imageBuffer) 
+    .resizeBilinear([parseInt(IMG_SIZE), parseInt(IMG_SIZE)]) 
+    .div(tf.scalar(255))
+    .mean(2)
+    .expandDims(0)
+    .expandDims(3);
+  return tfimage;
+};
+
+const imageClassification = async imagePath => {
+  // Obtenemos el tensor
+  const tensor = readImage(imagePath);
+  // Realizamos la predicción
+  const prediccion = await model.predict(tensor).data();
+
+  if (prediccion >= 0.5) {
+      console.log("Es un PERRO");
   }
   else{
-      console.log("Es un gato");
+    console.log("Es un GATO");
   }
-  console.log(prediction);
+};
 
+// Si la langitud de los argumentos no es distinto de 3 damos un error
+if (process.argv.length !== 3)
+  throw new Error('incorrect arguments: node main.js <IMAGE_FILE>');
 
-
-})();
+start();
