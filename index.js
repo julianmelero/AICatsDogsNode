@@ -1,23 +1,25 @@
 
 // Cargamos los módulos necesarios, como son Tensorflow para Node y jimp para manipular imágenes
-
 const tf = require('@tensorflow/tfjs-node');
 const Jimp = require('jimp');
 
 // Directorio para el modelo
 const MODEL_DIR_PATH = `${"./"}`;
 
-// Directorio y archivo de la imagen
-const IMAGE_FILE_PATH = "./dog.jpg";
 
 // Función asíncrona para la carga del modelo, de la imagen, transformación y predicción
 
 (async () => {
 
+if (process.argv.length !== 3) throw new Error('Faltan argumentos: node main.js <IMAGE_FILE>');
+
+// Directorio y archivo de la imagen
+const IMAGE_FILE_PATH = process.argv[2];
   
   
-  const model = await tf.loadLayersModel(`file://${MODEL_DIR_PATH}/model.json`);
+const model = await tf.loadLayersModel(`file://${MODEL_DIR_PATH}/model.json`);
   
+
   const image = await Jimp.read(IMAGE_FILE_PATH);
 
   // Redimensionamos la imagen a 1200 * 600 y la alineamos al centro
@@ -45,6 +47,8 @@ const IMAGE_FILE_PATH = "./dog.jpg";
   const outShape = [100, 100, NUM_OF_CHANNELS];
   let img_tensor = tf.tensor3d(values, outShape, 'float32');
   img_tensor = img_tensor.expandDims(0);
+
+
 
   const prediction = await model.predict(img_tensor).dataSync();
 
